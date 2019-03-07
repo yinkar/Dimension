@@ -1,0 +1,364 @@
+<?php
+
+$user_dir = 'user';
+$port = '8888';
+
+
+if(empty($argv[1])) {
+	echo 'Error: Wrong command. You can look at the help doc on "php dim help"';
+	die();
+}
+else {
+	$command = $argv[1];
+}
+
+
+if($command == 'help') {
+	$doc = '
+    ============ Dimension Command Line Interface =============
+    #                                                         #
+    #    --------------Create command(+)-------------         #
+    #    * To create a new controller:                        #
+    #        php dim create:controller TestController         #
+    #        or                                               #
+    #        php dim +controller TestController               #
+    #                       ----                              #
+    #    * To create a new view:                              #
+    #        php dim create:view TestView                     #
+    #        or                                               #
+    #        php dim +view TestView                           #
+    #                                                         #
+    #     (Note: if you use "example" word after view name.   #
+    #     Tt will create an example view page that uses       #
+    #     Foton and Hadron frameworks.                        #
+    #     like: php dim +view TestView example                #
+    #     And if you add "controller" word after "example",   #
+    #     it will create a controller linked the view.)       #
+    #                       ----                              #
+    #    * To create a new model:                             #
+    #        php dim create:model TestModel                   #
+    #        or                                               #
+    #        php dim +model TestModel                         #
+    #                                                         #
+    #                                                         #
+    #    --------------Delete command(-)-------------         #
+    #    * To delete any controller:                          #
+    #        php dim delete:controller TestController         #
+    #        or                                               #
+    #        php dim -controller TestController               #
+    #                      ----                               #
+    #    * To delete any view:                                #
+    #        php dim delete:view TestView                     #
+    #        or                                               #
+    #        php dim -view TestView                           #
+    #                      ----                               #
+    #    * To delete any model:                               #
+    #        php dim delete:model TestModel                   #
+    #        or                                               #
+    #        php dim -model TestModel                         #
+    #                                                         #
+    #    ----------------Web command-----------------         #
+    #    * To serve your project:                             #
+    #        php dim web                                      #
+    #                                                         #
+    ===========================================================
+	';
+
+	echo $doc;
+	die();
+}
+
+if($command == 'web') {
+	echo 'Server started at http://localhost:'.$port.'.'."\n";
+	exec('explorer http://localhost:'.$port);
+	$web = shell_exec('php -S localhost:'.$port);
+}
+
+$operator = array(
+	'create' => '+',
+	'delete' => '-'
+);
+
+foreach ($operator as $key => $value) {
+	if(substr($command, 0, strlen($value)) === $value) {
+		$command = $key.':'.substr($command, 1);
+		break;
+	}
+}
+
+if(strpos($command, ':') !== false) {
+	$event = explode(':', $command);
+
+	if($event[0] == 'create') {
+
+		switch ($event[1]) {
+			case 'controller':
+
+				$name = namer($event[1]);
+
+				$content = '<?php 
+			
+class '.ucfirst($name).' extends Controller {
+	public function index() {
+		echo '."'".$name.' controller.'."'".';
+	}
+}';
+
+				creator($event[1], $name, $content);
+
+				break;
+			
+			case 'view';
+
+				$name = namer($event[1]);
+
+				$content = '<!DOCTYPE html>
+<html>
+<head>
+	<title>'.$name.'</title>
+
+	+[dimension]
+		Foton::use();
+	-[dimension]
+</head>
+<body>
+
+	<div id="container" class="inline shadow padding margin">
+		'.$name.' view.
+	</div>
+	
+	+[dimension]
+		Hadron::use();
+	-[dimension]
+</body>
+</html>';
+
+				if(isset($argv[3])) {
+					if($argv[3] == 'example') {
+						$content = '<!DOCTYPE html>
+<html>
+<head>
+	<title>'.$name.'</title>
+
+	+[dimension]
+		Foton::use();
+	-[dimension]
+
+	+[foton]
+		#container {
+			width: 1000px;
+			margin: 40px auto;
+		}
+	-[foton]
+</head>
+<body>
+
+	<div id="menu">
+		
+	</div>
+
+
+	<div id="container" class="shadow padding">
+		
+		<div id="homepage">
+			'.$name.' view homepage.
+		</div>
+
+		<div id="rand">
+			<h1>Random</h1>
+			<p>
+				<span id="randomArea" class="margin block"><button>Get a random number</button></span>
+			</p>
+		</div>
+
+		<div id="range">
+			<h1>Range</h1>
+			<p>
+				<div>
+					<input type="text" id="start" value="10" />
+				</div>
+				<div>
+					<input type="text" id="end" value="30" />
+				</div>
+				<div>
+					<input type="text" id="jump" value="3" />
+				</div>
+				<span id="rangeArea" class="margin block"><button>Get range</button></span>
+			</p>
+		</div>
+	</div>
+	
+	+[dimension]
+		Hadron::use();
+	-[dimension]
+
+	+[hadron]
+		h('."'".'#randomArea button'."'".').on('."'".'click'."'".', function() {
+			var random = window.rand(0, 100);
+			h('."'".'#randomArea'."'".').put('."'".'Random number: '."'".' + random);
+		});
+
+
+		h('."'".'#rangeArea button'."'".').on('."'".'click'."'".', function() {
+			var start = h('."'".'#start'."'".').getVal();
+			var end = h('."'".'#end'."'".').getVal();
+			var jump = h('."'".'#jump'."'".').getVal();
+			var range = window.range(start, end, jump);
+
+			h('."'".'#rangeArea'."'".').put('."'".'Range: '."'".' + range);
+		});
+
+
+
+		h('."'".'#homepage'."'".').visible();
+		h('."'".'#rand'."'".').invisible();
+		h('."'".'#range'."'".').invisible();
+	
+		if(url().rand == '."'".'true'."'".') {
+			h('."'".'#homepage'."'".').invisible();
+			h('."'".'#rand'."'".').visible();
+			h('."'".'#range'."'".').invisible();
+		}
+		else if(url().range == '."'".'true'."'".') {
+			h('."'".'#start'."'".').setVal(rand(1, 10));
+			h('."'".'#end'."'".').setVal(rand(20, 100));
+			h('."'".'#jump'."'".').setVal(rand(1, 5));
+
+			h('."'".'#homepage'."'".').invisible();
+			h('."'".'#rand'."'".').invisible();
+			h('."'".'#range'."'".').visible();
+		}
+
+
+
+		var menuitems = [
+			['."'".'Home'."'".', '."'".'#homepage'."'".'],
+			['."'".'Random'."'".', '."'".'#rand'."'".'],
+			['."'".'Range'."'".', '."'".'#range'."'".']
+		];
+
+		h('."'".'#menu'."'".').menutize(menuitems, '."'".'horizontal'."'".', '."'".'red'."'".', '."'".'smooth'."'".');
+
+		h('."'".'a'."'".').on('."'".'click'."'".', function() {
+			location.reload();
+		});
+	-[hadron]
+</body>
+</html>';
+					}
+				}
+
+
+				creator($event[1], $name, $content);
+
+				if(isset($argv[4])) {
+					if($argv[4] == 'controller') {
+						$controllerContent = '<?php 
+			
+class '.ucfirst($name).' extends Controller {
+	public function index() {
+		$this->view('."'".$name."'".');
+	}
+}';
+						echo '
+';
+						creator('controller', $name, $controllerContent);
+					}
+				}
+
+				break;
+
+			case 'model':
+
+				$name = namer($event[1]);
+
+				$content = '<?php 
+
+class '.ucfirst($name).' {
+	private $data;
+
+	public function get'.ucfirst($name).'() {
+		return $this->data;
+	}
+	public function set'.ucfirst($name).'($data) {
+		$this->data = $data;
+	}
+}';
+
+				creator($event[1], $name, $content);
+
+				break;
+			
+			default:
+				echo 'Error: Undefined type.';
+				break;
+		}
+	}
+	else if($event[0] == 'delete') {
+		if($event[1] == 'controller' || $event[1] == 'view' || $event[1] == 'model') {
+			if(isset($argv[2])) {
+				remover($event[1], $argv[2]);
+			}
+			else {
+				echo "Error: It has to be a name.";
+			}
+		}
+		else {
+			echo "Error: Undefined type.";
+		}
+	}
+
+}
+
+function namer($type) {
+	global $argv;
+
+	if(isset($argv[2])) {
+		return $argv[2];
+	}
+	else {
+		return $type.rand(1, 1000);
+	}
+}
+
+
+function creator($type, $name, $content) {
+	global $user_dir;
+
+	if(!file_exists("/".$user_dir."/".$type."s")) {
+		mkdir("/".$user_dir."/".$type."s", "0777", true);
+	}
+
+	$filepath = __DIR__."/".$user_dir."/".$type."s/".strtolower($name).".php";
+
+	
+	if(!file_exists($filepath)) {
+		if($type == 'model' && file_exists(__DIR__."/".$user_dir."/controllers/".strtolower($name).".php")) {
+			echo "Error: A model cannot have the same name as an existing controller. You can create a model with \"Model\" suffix for instance \"TestModel\" instead of \"Test\".";
+		}
+		else {
+			if(file_put_contents($filepath, $content)) {
+				echo ucfirst(strtolower($type)).' created.';
+			}
+		}
+	}
+	else {
+		echo 'Error: A '.strtolower($type).' file named '.$name.' already exists';
+	}
+
+}
+
+function remover($type, $name) {
+	$remove = false;
+	global $user_dir;
+	$path = __DIR__."/".$user_dir."/".$type."s/".strtolower($name).".php";
+
+	if(file_exists($path)) {
+		$remove = unlink($path);
+		echo ucfirst(strtolower($type))." successfully deleted.";
+	}
+	else {
+		echo "Error: No such a ".strtolower($type)." file named ".$name.".";
+	}
+	return $remove;
+}
